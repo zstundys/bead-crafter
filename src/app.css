@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+:root {
+	--color-bg-primary: #0f0f13;
+	--color-bg-secondary: #1a1a22;
+	--color-bg-tertiary: #252530;
+	--color-accent: #6366f1;
+	--color-accent-hover: #818cf8;
+	--color-text-primary: #f4f4f5;
+	--color-text-secondary: #a1a1aa;
+	--color-border: #3f3f46;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	background-color: var(--color-bg-primary);
+	color: var(--color-text-primary);
+	font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+@font-face {
+	font-family: 'Outfit';
+	src: url('https://fonts.gstatic.com/s/outfit/v11/QGYyz_MVcBeNP4NjuGObqx1XmO1I4TC1O4a0Ew.woff2') format('woff2');
+	font-weight: 300 700;
+	font-display: swap;
+}
+
