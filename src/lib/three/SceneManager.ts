@@ -72,11 +72,12 @@ export class SceneManager {
 		
 		// Setup axis gizmo
 		this.axisScene = new THREE.Scene();
+		this.axisScene.background = null; // Transparent background
 		this.axisCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-		this.axisCamera.position.set(0, 0, 3);
+		this.axisCamera.position.set(0, 0, 3.5); // Move camera back a bit to prevent clipping
 		
 		// Create axis helper with custom colors
-		this.axisHelper = new THREE.AxesHelper(1);
+		this.axisHelper = new THREE.AxesHelper(0.8); // Slightly smaller to fit better
 		// Customize colors: X=red, Y=green, Z=blue (default)
 		this.axisScene.add(this.axisHelper);
 		
@@ -165,9 +166,9 @@ export class SceneManager {
 			return sprite;
 		};
 		
-		this.axisScene.add(createLabel('X', 0xff4444, new THREE.Vector3(1.3, 0, 0)));
-		this.axisScene.add(createLabel('Y', 0x44ff44, new THREE.Vector3(0, 1.3, 0)));
-		this.axisScene.add(createLabel('Z', 0x4444ff, new THREE.Vector3(0, 0, 1.3)));
+		this.axisScene.add(createLabel('X', 0xff4444, new THREE.Vector3(1.05, 0, 0)));
+		this.axisScene.add(createLabel('Y', 0x44ff44, new THREE.Vector3(0, 1.05, 0)));
+		this.axisScene.add(createLabel('Z', 0x4444ff, new THREE.Vector3(0, 0, 1.05)));
 	}
 	
 	addBead(mesh: THREE.Mesh): void {
@@ -281,14 +282,12 @@ export class SceneManager {
 	
 	private renderAxisGizmo(): void {
 		// Sync axis camera rotation with main camera
-		this.axisCamera.position.set(0, 0, 3);
+		this.axisCamera.position.set(0, 0, 3.5);
 		this.axisCamera.quaternion.copy(this.camera.quaternion);
 		this.axisCamera.position.applyQuaternion(this.camera.quaternion);
 		this.axisCamera.lookAt(0, 0, 0);
 		
 		// Get pixel dimensions
-		const width = this.renderer.domElement.width;
-		const height = this.renderer.domElement.height;
 		const pixelRatio = this.renderer.getPixelRatio();
 		const gizmoPixels = this.gizmoSize * pixelRatio;
 		const padding = 16 * pixelRatio;
@@ -298,9 +297,12 @@ export class SceneManager {
 		this.renderer.setScissor(padding, padding, gizmoPixels, gizmoPixels);
 		this.renderer.setViewport(padding, padding, gizmoPixels, gizmoPixels);
 		
-		// Clear depth and render axis scene
+		// Disable auto clear and only clear depth, not color (keeps transparent)
+		const autoClear = this.renderer.autoClear;
+		this.renderer.autoClear = false;
 		this.renderer.clearDepth();
 		this.renderer.render(this.axisScene, this.axisCamera);
+		this.renderer.autoClear = autoClear;
 		
 		// Reset scissor test
 		this.renderer.setScissorTest(false);
