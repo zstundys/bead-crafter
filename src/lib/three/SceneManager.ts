@@ -17,6 +17,12 @@ export class SceneManager {
 	private stringGroup: THREE.Group;
 	private animationId: number | null = null;
 	
+	// Axis gizmo
+	private axisScene: THREE.Scene;
+	private axisCamera: THREE.PerspectiveCamera;
+	private axisHelper: THREE.AxesHelper;
+	private gizmoSize = 100; // pixels
+	
 	constructor(config: SceneConfig) {
 		// Scene
 		this.scene = new THREE.Scene();
@@ -63,6 +69,19 @@ export class SceneManager {
 		
 		// Setup environment
 		this.setupEnvironment();
+		
+		// Setup axis gizmo
+		this.axisScene = new THREE.Scene();
+		this.axisCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+		this.axisCamera.position.set(0, 0, 3);
+		
+		// Create axis helper with custom colors
+		this.axisHelper = new THREE.AxesHelper(1);
+		// Customize colors: X=red, Y=green, Z=blue (default)
+		this.axisScene.add(this.axisHelper);
+		
+		// Add axis labels
+		this.setupAxisLabels();
 	}
 	
 	private setupLighting(): void {
@@ -121,6 +140,34 @@ export class SceneManager {
 		this.scene.environment = envMap;
 		
 		pmremGenerator.dispose();
+	}
+	
+	private setupAxisLabels(): void {
+		// Create sprite labels for axes
+		const createLabel = (text: string, color: number, position: THREE.Vector3) => {
+			const canvas = document.createElement('canvas');
+			canvas.width = 64;
+			canvas.height = 64;
+			const ctx = canvas.getContext('2d')!;
+			
+			ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+			ctx.font = 'bold 48px Outfit, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(text, 32, 32);
+			
+			const texture = new THREE.CanvasTexture(canvas);
+			const material = new THREE.SpriteMaterial({ map: texture });
+			const sprite = new THREE.Sprite(material);
+			sprite.position.copy(position);
+			sprite.scale.setScalar(0.4);
+			
+			return sprite;
+		};
+		
+		this.axisScene.add(createLabel('X', 0xff4444, new THREE.Vector3(1.3, 0, 0)));
+		this.axisScene.add(createLabel('Y', 0x44ff44, new THREE.Vector3(0, 1.3, 0)));
+		this.axisScene.add(createLabel('Z', 0x4444ff, new THREE.Vector3(0, 0, 1.3)));
 	}
 	
 	addBead(mesh: THREE.Mesh): void {
@@ -221,9 +268,42 @@ export class SceneManager {
 		const animate = () => {
 			this.animationId = requestAnimationFrame(animate);
 			this.controls.update();
+			
+			// Render main scene
+			this.renderer.setViewport(0, 0, this.renderer.domElement.width, this.renderer.domElement.height);
 			this.renderer.render(this.scene, this.camera);
+			
+			// Render axis gizmo in bottom-left corner
+			this.renderAxisGizmo();
 		};
 		animate();
+	}
+	
+	private renderAxisGizmo(): void {
+		// Sync axis camera rotation with main camera
+		this.axisCamera.position.set(0, 0, 3);
+		this.axisCamera.quaternion.copy(this.camera.quaternion);
+		this.axisCamera.position.applyQuaternion(this.camera.quaternion);
+		this.axisCamera.lookAt(0, 0, 0);
+		
+		// Get pixel dimensions
+		const width = this.renderer.domElement.width;
+		const height = this.renderer.domElement.height;
+		const pixelRatio = this.renderer.getPixelRatio();
+		const gizmoPixels = this.gizmoSize * pixelRatio;
+		const padding = 16 * pixelRatio;
+		
+		// Set viewport to bottom-left corner
+		this.renderer.setScissorTest(true);
+		this.renderer.setScissor(padding, padding, gizmoPixels, gizmoPixels);
+		this.renderer.setViewport(padding, padding, gizmoPixels, gizmoPixels);
+		
+		// Clear depth and render axis scene
+		this.renderer.clearDepth();
+		this.renderer.render(this.axisScene, this.axisCamera);
+		
+		// Reset scissor test
+		this.renderer.setScissorTest(false);
 	}
 	
 	stopRenderLoop(): void {

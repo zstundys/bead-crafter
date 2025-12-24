@@ -66,8 +66,8 @@ export function createPonyBeadGeometry(): THREE.BufferGeometry {
 		24  // Tubular segments
 	);
 	
-	// Rotate to align with Y axis (horizontal bead position)
-	torusGeo.rotateX(Math.PI / 2);
+	// Rotate 90 degrees on Y axis so the hole is visible from the front
+	torusGeo.rotateY(Math.PI / 2);
 	
 	geometryCache.set(cacheKey, torusGeo);
 	return torusGeo;
@@ -128,15 +128,15 @@ export function createStringGeometry(
 	return new THREE.TubeGeometry(curve, 8, 0.03, 8, false);
 }
 
-// Create string material
-export function createStringMaterial(): THREE.Material {
-	const cacheKey = 'string';
+// Create string material with custom color
+export function createStringMaterial(color: string = STRING_COLOR): THREE.Material {
+	const cacheKey = `string-${color}`;
 	if (materialCache.has(cacheKey)) {
 		return materialCache.get(cacheKey)!;
 	}
 	
 	const material = new THREE.MeshStandardMaterial({
-		color: new THREE.Color(STRING_COLOR),
+		color: new THREE.Color(color),
 		metalness: 0.1,
 		roughness: 0.8,
 	});
@@ -149,13 +149,14 @@ export function createStringMaterial(): THREE.Material {
 export function createStringMesh(
 	startPos: { x: number; y: number; z: number },
 	endPos: { x: number; y: number; z: number },
-	assemblyStep: number
+	assemblyStep: number,
+	color: string = STRING_COLOR
 ): THREE.Mesh {
 	const start = new THREE.Vector3(startPos.x, startPos.y, startPos.z);
 	const end = new THREE.Vector3(endPos.x, endPos.y, endPos.z);
 	
 	const geometry = createStringGeometry(start, end);
-	const material = createStringMaterial();
+	const material = createStringMaterial(color);
 	
 	const mesh = new THREE.Mesh(geometry, material);
 	mesh.castShadow = true;

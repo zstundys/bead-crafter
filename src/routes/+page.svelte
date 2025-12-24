@@ -292,8 +292,7 @@
 	.viewer-overlay {
 		position: absolute;
 		bottom: 24px;
-		left: 50%;
-		transform: translateX(-50%);
+		right: 24px;
 		pointer-events: none;
 	}
 	

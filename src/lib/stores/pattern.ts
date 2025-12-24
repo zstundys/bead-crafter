@@ -31,20 +31,37 @@ export const editorState = writable<EditorState>({
 export const BEAD_RADIUS = 0.4;
 export const BEAD_HEIGHT = 0.3;
 export const BEAD_HOLE_RADIUS = 0.12;
-export const ROW_SPACING = 0.65;
-export const BEAD_SPACING = 0.85;
+
+// Adjustable spacing values (as stores for reactivity)
+export const beadSpacing = writable(0.65); // X-axis gap between beads
+export const rowSpacing = writable(0.65);  // Y-axis gap between rows
+
+// View settings store
+export interface ViewSettings {
+	beadSpacing: number;
+	rowSpacing: number;
+	stringColor: string;
+}
+
+export const viewSettings = writable<ViewSettings>({
+	beadSpacing: 0.65,
+	rowSpacing: 0.65,
+	stringColor: '#3d3d3d'
+});
 
 // Compute 3D positions for all beads in a pattern
-export function computeBeadPositions(pattern: BeadPattern): ComputedBead[] {
+export function computeBeadPositions(pattern: BeadPattern, settings: ViewSettings): ComputedBead[] {
 	const beads: ComputedBead[] = [];
 	let assemblyStep = 0;
 	
+	const { beadSpacing: bSpacing, rowSpacing: rSpacing } = settings;
+	
 	pattern.rows.forEach((row, rowIndex) => {
-		const y = -rowIndex * ROW_SPACING;
+		const y = -rowIndex * rSpacing;
 		
 		if (row.rowType === 'single') {
 			// Single row - beads in a line
-			const rowWidth = (row.beads.length - 1) * BEAD_SPACING;
+			const rowWidth = (row.beads.length - 1) * bSpacing;
 			const startX = -rowWidth / 2;
 			
 			row.beads.forEach((bead, beadIndex) => {
@@ -52,7 +69,7 @@ export function computeBeadPositions(pattern: BeadPattern): ComputedBead[] {
 					id: bead.id,
 					colorCode: bead.colorCode,
 					position: {
-						x: startX + beadIndex * BEAD_SPACING,
+						x: startX + beadIndex * bSpacing,
 						y,
 						z: 0
 					},
@@ -69,7 +86,7 @@ export function computeBeadPositions(pattern: BeadPattern): ComputedBead[] {
 				const offsetZ = group.side === 'center' ? 0 : 0.3;
 				
 				groupBeads.forEach((bead, beadIndex) => {
-					const localY = y - beadIndex * ROW_SPACING * 0.8;
+					const localY = y - beadIndex * rSpacing * 0.8;
 					beads.push({
 						id: bead.id,
 						colorCode: bead.colorCode,
@@ -117,10 +134,10 @@ export function computeStringSegments(computedBeads: ComputedBead[]): StringSegm
 	return segments;
 }
 
-// Derived store for computed beads
+// Derived store for computed beads (reacts to pattern AND view settings)
 export const computedBeads: Readable<ComputedBead[]> = derived(
-	currentPattern,
-	($pattern) => $pattern ? computeBeadPositions($pattern) : []
+	[currentPattern, viewSettings],
+	([$pattern, $settings]) => $pattern ? computeBeadPositions($pattern, $settings) : []
 );
 
 // Derived store for string segments

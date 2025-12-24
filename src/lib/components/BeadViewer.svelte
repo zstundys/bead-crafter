@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
-	import { currentPattern, computedBeads, stringSegments, animationState } from '$lib/stores/pattern';
+	import { currentPattern, computedBeads, stringSegments, animationState, viewSettings } from '$lib/stores/pattern';
 	import type { ComputedBead, StringSegment } from '$lib/data/schema';
 	import type { SceneManager } from '$lib/three/SceneManager';
 	import type { AnimationEngine } from '$lib/three/AnimationEngine';
@@ -16,6 +16,41 @@
 	let totalSteps = $state(0);
 	let isPlaying = $state(false);
 	
+	// View settings
+	let showViewSettings = $state(false);
+	let beadSpacingValue = $state(0.65);
+	let rowSpacingValue = $state(0.65);
+	let stringColorValue = $state('#3d3d3d');
+	
+	// Subscribe to view settings
+	$effect(() => {
+		const unsub = viewSettings.subscribe(settings => {
+			beadSpacingValue = settings.beadSpacing;
+			rowSpacingValue = settings.rowSpacing;
+			stringColorValue = settings.stringColor;
+		});
+		return unsub;
+	});
+	
+	function updateBeadSpacing(e: Event) {
+		const value = parseFloat((e.target as HTMLInputElement).value);
+		viewSettings.update(s => ({ ...s, beadSpacing: value }));
+	}
+	
+	function updateRowSpacing(e: Event) {
+		const value = parseFloat((e.target as HTMLInputElement).value);
+		viewSettings.update(s => ({ ...s, rowSpacing: value }));
+	}
+	
+	function updateStringColor(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		viewSettings.update(s => ({ ...s, stringColor: value }));
+	}
+	
+	function resetSettings() {
+		viewSettings.set({ beadSpacing: 0.65, rowSpacing: 0.65, stringColor: '#3d3d3d' });
+	}
+	
 	// Subscribe to animation state
 	$effect(() => {
 		const unsub = animationState.subscribe(state => {
@@ -26,19 +61,20 @@
 		return unsub;
 	});
 	
-	// Rebuild scene when pattern changes
+	// Rebuild scene when pattern or view settings change
 	$effect(() => {
 		if (!browser) return;
 		
 		const beads = $computedBeads;
 		const strings = $stringSegments;
+		const settings = $viewSettings;
 		
 		if (sceneManager && beads.length > 0) {
-			rebuildScene(beads, strings);
+			rebuildScene(beads, strings, settings.stringColor);
 		}
 	});
 	
-	async function rebuildScene(beads: ComputedBead[], strings: StringSegment[]) {
+	async function rebuildScene(beads: ComputedBead[], strings: StringSegment[], stringColor: string) {
 		if (!sceneManager || !browser) return;
 		
 		const { createBeadMesh, createStringMesh, createKeychainLoop, clearCaches } = await import('$lib/three/BeadRenderer');
@@ -56,9 +92,9 @@
 			sceneManager!.addBead(mesh);
 		});
 		
-		// Add string segments
+		// Add string segments with custom color
 		strings.forEach(seg => {
-			const mesh = createStringMesh(seg.startPos, seg.endPos, seg.assemblyStep);
+			const mesh = createStringMesh(seg.startPos, seg.endPos, seg.assemblyStep, stringColor);
 			sceneManager!.addString(mesh);
 		});
 		
@@ -138,7 +174,8 @@
 		if (pattern) {
 			const beads = $computedBeads;
 			const strings = $stringSegments;
-			await rebuildScene(beads, strings);
+			const settings = $viewSettings;
+			await rebuildScene(beads, strings, settings.stringColor);
 		}
 	});
 	
@@ -156,6 +193,12 @@
 	
 	<!-- Camera controls overlay -->
 	<div class="camera-controls">
+		<button onclick={() => showViewSettings = !showViewSettings} title="View Settings" class:active={showViewSettings}>
+			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+				<circle cx="12" cy="12" r="3"/>
+			</svg>
+		</button>
 		<button onclick={resetCamera} title="Reset Camera">
 			<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -169,6 +212,57 @@
 			</svg>
 		</button>
 	</div>
+	
+	<!-- View Settings Panel -->
+	{#if showViewSettings}
+		<div class="view-settings">
+			<div class="settings-header">
+				<span>View Settings</span>
+				<button class="reset-btn" onclick={resetSettings} title="Reset to defaults">
+					Reset
+				</button>
+			</div>
+			<div class="setting-row">
+				<div class="setting-label">
+					<span>Bead Gap (X)</span>
+					<span class="value">{beadSpacingValue.toFixed(2)}</span>
+				</div>
+				<input 
+					type="range" 
+					min="0.3" 
+					max="1.2" 
+					step="0.01"
+					value={beadSpacingValue}
+					oninput={updateBeadSpacing}
+				/>
+			</div>
+			<div class="setting-row">
+				<div class="setting-label">
+					<span>Row Gap (Y)</span>
+					<span class="value">{rowSpacingValue.toFixed(2)}</span>
+				</div>
+				<input 
+					type="range" 
+					min="0.3" 
+					max="1.2" 
+					step="0.01"
+					value={rowSpacingValue}
+					oninput={updateRowSpacing}
+				/>
+			</div>
+			<div class="setting-row">
+				<div class="setting-label">
+					<span>String Color</span>
+					<span class="color-preview" style="background: {stringColorValue}"></span>
+				</div>
+				<input 
+					type="color" 
+					value={stringColorValue}
+					oninput={updateStringColor}
+				/>
+			</div>
+		</div>
+	{/if}
 	
 	<!-- Animation controls -->
 	{#if totalSteps > 0}
@@ -273,6 +367,130 @@
 		background: rgba(99, 102, 241, 0.3);
 		color: #f4f4f5;
 		border-color: rgba(99, 102, 241, 0.5);
+	}
+	
+	.camera-controls button.active {
+		background: rgba(99, 102, 241, 0.4);
+		color: #f4f4f5;
+		border-color: rgba(99, 102, 241, 0.6);
+	}
+	
+	.view-settings {
+		position: absolute;
+		top: 56px;
+		right: 12px;
+		background: rgba(26, 26, 34, 0.95);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 10px;
+		padding: 12px;
+		backdrop-filter: blur(8px);
+		min-width: 200px;
+	}
+	
+	.settings-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 12px;
+		padding-bottom: 8px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.settings-header span {
+		font-size: 12px;
+		font-weight: 600;
+		color: #f4f4f5;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+	
+	.reset-btn {
+		padding: 4px 8px;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 4px;
+		color: #71717a;
+		font-size: 11px;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+	
+	.reset-btn:hover {
+		background: rgba(99, 102, 241, 0.2);
+		color: #a5b4fc;
+		border-color: rgba(99, 102, 241, 0.3);
+	}
+	
+	.setting-row {
+		margin-bottom: 10px;
+	}
+	
+	.setting-row:last-child {
+		margin-bottom: 0;
+	}
+	
+	.setting-label {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 6px;
+		font-size: 12px;
+		color: #a1a1aa;
+	}
+	
+	.setting-row .value {
+		font-family: monospace;
+		color: #6366f1;
+		font-size: 11px;
+	}
+	
+	.setting-row .color-preview {
+		width: 16px;
+		height: 16px;
+		border-radius: 4px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+	}
+	
+	.setting-row input[type="range"] {
+		width: 100%;
+		height: 4px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 2px;
+		appearance: none;
+		cursor: pointer;
+	}
+	
+	.setting-row input[type="range"]::-webkit-slider-thumb {
+		appearance: none;
+		width: 12px;
+		height: 12px;
+		background: #6366f1;
+		border-radius: 50%;
+		cursor: pointer;
+		transition: transform 0.1s;
+	}
+	
+	.setting-row input[type="range"]::-webkit-slider-thumb:hover {
+		transform: scale(1.2);
+	}
+	
+	.setting-row input[type="color"] {
+		width: 100%;
+		height: 28px;
+		padding: 2px;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 6px;
+		cursor: pointer;
+	}
+	
+	.setting-row input[type="color"]::-webkit-color-swatch-wrapper {
+		padding: 2px;
+	}
+	
+	.setting-row input[type="color"]::-webkit-color-swatch {
+		border-radius: 4px;
+		border: none;
 	}
 	
 	.animation-controls {
