@@ -21,6 +21,7 @@
 	let beadSpacingValue = $state(0.65);
 	let rowSpacingValue = $state(0.65);
 	let stringColorValue = $state('#3d3d3d');
+	let sceneBackgroundValue = $state('#0f0f13');
 	
 	// Subscribe to view settings
 	$effect(() => {
@@ -28,8 +29,16 @@
 			beadSpacingValue = settings.beadSpacing;
 			rowSpacingValue = settings.rowSpacing;
 			stringColorValue = settings.stringColor;
+			sceneBackgroundValue = settings.sceneBackground;
 		});
 		return unsub;
+	});
+	
+	// Update scene background when it changes
+	$effect(() => {
+		if (sceneManager) {
+			sceneManager.setBackgroundColor(sceneBackgroundValue);
+		}
 	});
 	
 	function updateBeadSpacing(e: Event) {
@@ -47,8 +56,13 @@
 		viewSettings.update(s => ({ ...s, stringColor: value }));
 	}
 	
+	function updateSceneBackground(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		viewSettings.update(s => ({ ...s, sceneBackground: value }));
+	}
+	
 	function resetSettings() {
-		viewSettings.set({ beadSpacing: 0.65, rowSpacing: 0.65, stringColor: '#3d3d3d' });
+		viewSettings.set({ beadSpacing: 0.65, rowSpacing: 0.65, stringColor: '#3d3d3d', sceneBackground: '#0f0f13' });
 	}
 	
 	// Subscribe to animation state
@@ -259,6 +273,17 @@
 					type="color" 
 					value={stringColorValue}
 					oninput={updateStringColor}
+				/>
+			</div>
+			<div class="setting-row">
+				<div class="setting-label">
+					<span>Background</span>
+					<span class="color-preview" style="background: {sceneBackgroundValue}"></span>
+				</div>
+				<input 
+					type="color" 
+					value={sceneBackgroundValue}
+					oninput={updateSceneBackground}
 				/>
 			</div>
 		</div>

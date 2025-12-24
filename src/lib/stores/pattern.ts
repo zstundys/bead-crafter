@@ -41,12 +41,14 @@ export interface ViewSettings {
 	beadSpacing: number;
 	rowSpacing: number;
 	stringColor: string;
+	sceneBackground: string;
 }
 
 export const viewSettings = writable<ViewSettings>({
 	beadSpacing: 0.65,
 	rowSpacing: 0.65,
-	stringColor: '#3d3d3d'
+	stringColor: '#3d3d3d',
+	sceneBackground: '#0f0f13'
 });
 
 // Compute 3D positions for all beads in a pattern
