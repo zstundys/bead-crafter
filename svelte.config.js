@@ -16,9 +16,9 @@ const config = {
 			precompress: false,
 			strict: true
 		}),
-		// Base path for GitHub Pages (update this to your repo name if needed)
+		// Base path for GitHub Pages (must match your repo name)
 		paths: {
-			base: process.env.NODE_ENV === 'production' ? '/beads' : ''
+			base: process.env.NODE_ENV === 'production' ? '/bead-crafter' : ''
 		}
 	}
 };
