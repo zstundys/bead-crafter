@@ -10,6 +10,7 @@
 	let container: HTMLDivElement;
 	let sceneManager: SceneManager | null = null;
 	let animationEngine: AnimationEngine | null = null;
+	let resizeObserver: ResizeObserver | null = null;
 	
 	// Track current step for reactivity
 	let currentStep = $state(0);
@@ -117,12 +118,6 @@
 		sceneManager.centerCamera();
 	}
 	
-	function handleResize() {
-		if (!container || !sceneManager) return;
-		const { width, height } = container.getBoundingClientRect();
-		sceneManager.resize(width, height);
-	}
-	
 	// Animation controls
 	function play() {
 		animationEngine?.play();
@@ -181,7 +176,17 @@
 		
 		sceneManager.startRenderLoop();
 		
-		window.addEventListener('resize', handleResize);
+		// Use ResizeObserver for responsive resize handling
+		// This catches container size changes from any source (window, sidebar, layout)
+		resizeObserver = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const { width, height } = entry.contentRect;
+				if (sceneManager && width > 0 && height > 0) {
+					sceneManager.resize(width, height);
+				}
+			}
+		});
+		resizeObserver.observe(container);
 		
 		// Initial build if pattern exists
 		const pattern = $currentPattern;
@@ -194,9 +199,7 @@
 	});
 	
 	onDestroy(() => {
-		if (browser) {
-			window.removeEventListener('resize', handleResize);
-		}
+		resizeObserver?.disconnect();
 		animationEngine?.dispose();
 		sceneManager?.dispose();
 	});

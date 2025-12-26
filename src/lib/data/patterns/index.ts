@@ -168,3 +168,4 @@ export const samplePatterns: BeadPattern[] = [
 	dogPattern
 ];
 
+
